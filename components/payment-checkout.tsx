@@ -110,21 +110,27 @@ export function PaymentCheckout({
   useEffect(() => {
     const loadFormData = () => {
       try {
-        const savedPhone = localStorage.getItem('payment_phone');
-        const savedFirstName = localStorage.getItem('payment_firstName');
-        const savedLastName = localStorage.getItem('payment_lastName');
-        const savedPanel = localStorage.getItem('payment_selectedPanel');
-        const savedPlan = localStorage.getItem('payment_plan');
-        const savedProvider = localStorage.getItem('payment_provider');
+        const savedPhone = localStorage.getItem("payment_phone");
+        const savedFirstName = localStorage.getItem("payment_firstName");
+        const savedLastName = localStorage.getItem("payment_lastName");
+        const savedPanel = localStorage.getItem("payment_selectedPanel");
+        const savedPlan = localStorage.getItem("payment_plan");
+        const savedProvider = localStorage.getItem("payment_provider");
 
         if (savedPhone) setPhone(savedPhone);
         if (savedFirstName) setFirstName(savedFirstName);
         if (savedLastName) setLastName(savedLastName);
-        if (savedPanel && panels.some(p => p.id === savedPanel)) setSelectedPanel(savedPanel);
-        if (savedPlan && (savedPlan === 'monthly' || savedPlan === 'annual')) setPlan(savedPlan as PlanId);
-        if (savedProvider && (savedProvider === 'paystack' || savedProvider === 'etegram')) setPaymentProvider(savedProvider as PaymentProvider);
+        if (savedPanel && panels.some((p) => p.id === savedPanel))
+          setSelectedPanel(savedPanel);
+        if (savedPlan && (savedPlan === "monthly" || savedPlan === "annual"))
+          setPlan(savedPlan as PlanId);
+        if (
+          savedProvider &&
+          (savedProvider === "paystack" || savedProvider === "etegram")
+        )
+          setPaymentProvider(savedProvider as PaymentProvider);
       } catch (err) {
-        console.error('Failed to load form data from localStorage', err);
+        console.error("Failed to load form data from localStorage", err);
       }
     };
     loadFormData();
@@ -134,14 +140,14 @@ export function PaymentCheckout({
   useEffect(() => {
     const saveFormData = () => {
       try {
-        localStorage.setItem('payment_phone', phone);
-        localStorage.setItem('payment_firstName', firstName);
-        localStorage.setItem('payment_lastName', lastName);
-        localStorage.setItem('payment_selectedPanel', selectedPanel);
-        localStorage.setItem('payment_plan', plan);
-        localStorage.setItem('payment_provider', paymentProvider);
+        localStorage.setItem("payment_phone", phone);
+        localStorage.setItem("payment_firstName", firstName);
+        localStorage.setItem("payment_lastName", lastName);
+        localStorage.setItem("payment_selectedPanel", selectedPanel);
+        localStorage.setItem("payment_plan", plan);
+        localStorage.setItem("payment_provider", paymentProvider);
       } catch (err) {
-        console.error('Failed to save form data to localStorage', err);
+        console.error("Failed to save form data to localStorage", err);
       }
     };
     saveFormData();
