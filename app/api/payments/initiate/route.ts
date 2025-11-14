@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { PaymentStatus, PaymentType, Prisma } from "@prisma/client";
 
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 
 const SETUP_FEE = 15000;
 const MONTHLY_SERVICE_FEE = 5000;
@@ -29,19 +28,14 @@ function buildReference(plan: PaymentPlan) {
 
 export async function POST(request: Request) {
   try {
-    const session = await auth();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await request.json();
     const plan = resolvePlan(body?.plan);
     const panelId = typeof body?.panelId === "string" ? body.panelId : null;
+    const userId = typeof body?.userId === "string" ? body.userId : null;
 
-    if (!panelId) {
+    if (!panelId || !userId) {
       return NextResponse.json(
-        { error: "panelId is required" },
+        { error: "panelId and userId are required" },
         { status: 400 }
       );
     }
@@ -49,7 +43,7 @@ export async function POST(request: Request) {
     const panel = await prisma.panel.findFirst({
       where: {
         id: panelId,
-        userId: session.user.id,
+        userId,
       },
     });
 
@@ -101,7 +95,7 @@ export async function POST(request: Request) {
         })
       : await prisma.payment.create({
           data: {
-            userId: session.user.id,
+            userId,
             panelId: panel.id,
             amount: totalAmount,
             currency: "NGN",

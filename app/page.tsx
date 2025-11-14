@@ -3,12 +3,9 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
-import { TicketSelection } from "@/components/ticket-selection";
 import { CreatePanelForm } from "@/components/user-form";
-import { PaymentOptions } from "@/components/payment-options";
-import { OrderSummary } from "@/components/order-summary";
+import { PaymentCheckout } from "@/components/payment-checkout";
 import { SuccessModal } from "@/components/success-modal";
-import { useSession } from "@/hooks/use-session";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Sparkles } from "lucide-react";
@@ -20,7 +17,7 @@ function PaymentCallbackHandler({
   setStep,
 }: {
   setShowSuccess: (show: boolean) => void;
-  setStep: (step: "tickets" | "attendee" | "payment" | "success") => void;
+  setStep: (step: "register" | "payment" | "success") => void;
 }) {
   const searchParams = useSearchParams();
 
@@ -32,7 +29,7 @@ function PaymentCallbackHandler({
       toast.success("Payment successful!");
       setShowSuccess(true);
       setTimeout(() => {
-        setStep("tickets");
+        setStep("register");
         setShowSuccess(false);
         // Clear URL parameters
         window.history.replaceState({}, "", "/");
@@ -49,77 +46,31 @@ function PaymentCallbackHandler({
 }
 
 export default function Home() {
-  const [step, setStep] = useState<
-    "tickets" | "attendee" | "payment" | "success"
-  >("tickets");
-  const {
-    cart,
-    addToCart,
-    updateCartQuantity,
-    removeFromCart,
-    updateAttendee,
-    resetSession,
-    getSession,
-  } = useSession();
+  const [step, setStep] = useState<"register" | "payment" | "success">(
+    "register"
+  );
   const [showSuccess, setShowSuccess] = useState(false);
-  const [ticketSheetOpen, setTicketSheetOpen] = useState(false);
+  const [panelData, setPanelData] = useState<any>(null);
 
-  const handleTicketSelect = (
-    ticketType: string,
-    quantity: number,
-    price: number
-  ) => {
-    addToCart(ticketType, quantity, price);
-    setStep("attendee");
-  };
-
-  const handleAttendeeSubmit = (data: any) => {
-    updateAttendee(data);
+  const handlePanelSubmit = (data: any) => {
+    setPanelData(data);
     setStep("payment");
   };
 
   const handlePaymentSuccess = () => {
     setShowSuccess(true);
     setTimeout(() => {
-      setStep("tickets");
+      setStep("register");
       setShowSuccess(false);
+      setPanelData(null);
     }, 3000);
   };
 
   const handleReset = () => {
-    resetSession();
-    setStep("tickets");
+    setPanelData(null);
+    setStep("register");
     toast.success("Session reset successfully");
   };
-
-  const handleProceedToCheckout = () => {
-    if (cart.length === 0) {
-      toast.error("Please select tickets first");
-      return;
-    }
-    setStep("attendee");
-    const element = document.getElementById("ticket-selection");
-    element?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  // Sync high-level step and cart to DB for status tracking
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const controller = new AbortController();
-    fetch("/api/session/sync", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sessionId: getSession().sessionId,
-        cart,
-        lastStep: step,
-        status: step === "success" ? "completed" : "in_progress",
-      }),
-      signal: controller.signal,
-      cache: "no-store",
-    }).catch(() => {});
-    return () => controller.abort();
-  }, [step, cart, getSession]);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -155,11 +106,11 @@ export default function Home() {
                     size="lg"
                     className="font-semibold text-xl"
                     onClick={() => {
-                      setTicketSheetOpen(true);
-                      // Also scroll to ticket section
+                      setStep("register");
+                      // Scroll to registration section
                       setTimeout(() => {
                         const element =
-                          document.getElementById("ticket-selection");
+                          document.getElementById("panel-registration");
                         element?.scrollIntoView({ behavior: "smooth" });
                       }, 100);
                     }}
@@ -188,39 +139,94 @@ export default function Home() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 order-1" id="ticket-selection">
-            {step === "tickets" && (
-              // <TicketSelection
-              //   onSelect={handleTicketSelect}
-              //   openSheet={ticketSheetOpen}
-              //   onSheetChange={setTicketSheetOpen}
-              // />
-              <TicketSelection
-                onSelect={handleTicketSelect}
-                openSheet={ticketSheetOpen}
-                onSheetChange={setTicketSheetOpen}
-                cart={cart}
-                onProceedToCheckout={handleProceedToCheckout}
-              />
+          <div className="lg:col-span-2 order-1" id="panel-registration">
+            {step === "register" && (
+              <CreatePanelForm onSubmit={handlePanelSubmit} />
             )}
-            {step === "attendee" && <CreatePanelForm />}
-            {step === "payment" && (
-              <PaymentOptions
-                onSuccess={handlePaymentSuccess}
-                onBack={() => setStep("attendee")}
+            {step === "payment" && panelData && (
+              <PaymentCheckout
+                panels={[panelData]}
+                userEmail={panelData.ownerEmail}
+                userName={panelData.ownerName}
+                defaultPhone={panelData.ownerPhone}
+                etegramProjectId={
+                  process.env.NEXT_PUBLIC_ETEGRAM_PROJECT_ID || ""
+                }
+                etegramPublicKey={
+                  process.env.NEXT_PUBLIC_ETEGRAM_PUBLIC_KEY || ""
+                }
+                initialPanelId={panelData.id}
               />
             )}
           </div>
 
-          {/* Order Summary Sidebar */}
+          {/* Status Sidebar */}
           <div className="lg:col-span-1 order-2">
-            <OrderSummary
-              cart={cart}
-              onUpdateQuantity={updateCartQuantity}
-              onRemoveItem={removeFromCart}
-              onReset={handleReset}
-              onProceedToCheckout={handleProceedToCheckout}
-            />
+            <div className="bg-card rounded-lg p-6 shadow-sm">
+              <h3 className="text-lg font-semibold mb-4">
+                Registration Status
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-3 h-3 rounded-full ${
+                      step === "register" ? "bg-primary" : "bg-muted"
+                    }`}
+                  />
+                  <span
+                    className={
+                      step === "register"
+                        ? "font-medium"
+                        : "text-muted-foreground"
+                    }
+                  >
+                    Panel Registration
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-3 h-3 rounded-full ${
+                      step === "payment" ? "bg-primary" : "bg-muted"
+                    }`}
+                  />
+                  <span
+                    className={
+                      step === "payment"
+                        ? "font-medium"
+                        : "text-muted-foreground"
+                    }
+                  >
+                    Payment Processing
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-3 h-3 rounded-full ${
+                      step === "success" ? "bg-primary" : "bg-muted"
+                    }`}
+                  />
+                  <span
+                    className={
+                      step === "success"
+                        ? "font-medium"
+                        : "text-muted-foreground"
+                    }
+                  >
+                    Registration Complete
+                  </span>
+                </div>
+              </div>
+              {step !== "register" && (
+                <Button
+                  variant="outline"
+                  onClick={handleReset}
+                  className="w-full mt-4"
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Start Over
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>

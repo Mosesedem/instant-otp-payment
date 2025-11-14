@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { PaymentStatus, PaymentType } from "@prisma/client";
 
-interface PaymentRequest {
-  sessionId: string;
+interface PanelPaymentRequest {
+  userId: string;
+  panelName: string;
+  subdomain: string;
+  customDomain?: string;
+  ownerEmail: string;
+  ownerPhone: string;
+  plan: "monthly" | "annual";
   method: "etegram" | "paystack";
-  amount: number;
-  attendeeEmail: string;
-  attendeeName: string;
-  attendeePhone?: string;
-  attendeeCompany?: string;
-  attendeeJobTitle?: string;
-  tickets: Array<{
-    ticketType: string;
-    quantity: number;
-    price?: number;
-  }>;
   callbackUrl?: string;
 }
 
@@ -28,14 +24,17 @@ const generateReference = (method: "etegram" | "paystack") => {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: PaymentRequest = await request.json();
+    const body: PanelPaymentRequest = await request.json();
 
     // Validate payment request
     if (
-      !body.sessionId ||
-      !body.method ||
-      !body.amount ||
-      !body.attendeeEmail
+      !body.userId ||
+      !body.panelName ||
+      !body.subdomain ||
+      !body.ownerEmail ||
+      !body.ownerPhone ||
+      !body.plan ||
+      !body.method
     ) {
       return NextResponse.json(
         {
@@ -46,51 +45,103 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate amount
-    if (body.amount <= 0) {
+    // Validate subdomain format
+    const subdomainRegex = /^[a-z0-9-]+$/;
+    if (!subdomainRegex.test(body.subdomain)) {
       return NextResponse.json(
         {
           success: false,
-          error: "Invalid payment amount",
+          error: "Invalid subdomain format",
         },
         { status: 400 }
       );
     }
 
+    // Check if subdomain already exists
+    const existingPanel = await prisma.panel.findUnique({
+      where: { subdomain: body.subdomain },
+    });
+
+    if (existingPanel) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Subdomain already exists",
+        },
+        { status: 409 }
+      );
+    }
+
+    // Find or create user
+    let user = await prisma.user.findUnique({
+      where: { email: body.ownerEmail },
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: body.ownerEmail,
+          name: body.panelName,
+          phone: body.ownerPhone,
+        },
+      });
+    }
+
+    // Create panel
+    const panel = await prisma.panel.create({
+      data: {
+        name: body.panelName,
+        subdomain: body.subdomain,
+        customDomain: body.customDomain || null,
+        ownerEmail: body.ownerEmail,
+        ownerPhone: body.ownerPhone,
+        status: "pending",
+        userId: user.id,
+        paymentStatus: PaymentStatus.PENDING,
+      },
+    });
+
+    // Calculate payment amount
+    const setupFee = 15000;
+    const serviceFee = body.plan === "annual" ? 60000 : 5000;
+    const totalAmount = setupFee + serviceFee;
+
     // Generate unique reference
     const reference = generateReference(body.method);
 
-    // Save attempted purchase to database
-    try {
-      await prisma.purchase.create({
-        data: {
-          sessionId: body.sessionId,
-          reference,
-          status: "attempted",
-          paymentMethod: body.method,
-          amount: body.amount,
-          attendeeEmail: body.attendeeEmail,
-          attendeeName: body.attendeeName,
-          attendeePhone: body.attendeePhone,
-          attendeeCompany: body.attendeeCompany,
-          attendeeJobTitle: body.attendeeJobTitle,
-          tickets: body.tickets,
-          metadata: {
-            userAgent: request.headers.get("user-agent"),
-            ip:
-              request.headers.get("x-forwarded-for") ||
-              request.headers.get("x-real-ip"),
-          },
+    // Create payment record
+    const payment = await prisma.payment.create({
+      data: {
+        userId: user.id,
+        panelId: panel.id,
+        amount: totalAmount,
+        currency: "NGN",
+        type:
+          body.plan === "annual"
+            ? PaymentType.ANNUAL_SUBSCRIPTION
+            : PaymentType.MONTHLY_SUBSCRIPTION,
+        status: PaymentStatus.PENDING,
+        reference,
+        paymentMethod: body.method,
+        provider: body.method,
+        externalId: reference,
+        metadata: {
+          plan: body.plan,
+          setupFee,
+          serviceFee,
+          userAgent: request.headers.get("user-agent"),
+          ip:
+            request.headers.get("x-forwarded-for") ||
+            request.headers.get("x-real-ip"),
         },
-      });
-    } catch (dbError) {
-      console.error("[Payment] Database save error:", dbError);
-      // Continue with payment initialization even if DB save fails
-    }
+      },
+    });
 
     const paymentResult = {
       method: body.method,
-      amount: body.amount,
+      amount: totalAmount,
+      panelId: panel.id,
+      paymentId: payment.id,
     };
 
     if (body.method === "paystack") {
@@ -107,15 +158,15 @@ export async function POST(request: NextRequest) {
       }
 
       const initBody = {
-        email: body.attendeeEmail,
-        amount: body.amount * 100,
+        email: body.ownerEmail,
+        amount: totalAmount * 100, // Convert to kobo
         reference,
         callback_url: body.callbackUrl || `${request.nextUrl.origin}/verify`,
         metadata: {
-          sessionId: body.sessionId,
-          attendee_name: body.attendeeName,
-          attendee_phone: body.attendeePhone,
-          tickets: body.tickets,
+          panelId: panel.id,
+          paymentId: payment.id,
+          plan: body.plan,
+          subdomain: body.subdomain,
         },
       };
 
@@ -144,12 +195,13 @@ export async function POST(request: NextRequest) {
         throw new Error(initData.message || "Payment initialization failed");
       }
 
-      console.log("[Payment] Initialized:", {
-        sessionId: body.sessionId,
+      console.log("[Panel Payment] Initialized:", {
+        panelId: panel.id,
+        paymentId: payment.id,
         method: body.method,
         reference,
-        amount: body.amount,
-        email: body.attendeeEmail,
+        amount: totalAmount,
+        email: body.ownerEmail,
         timestamp: new Date().toISOString(),
       });
 
@@ -159,21 +211,43 @@ export async function POST(request: NextRequest) {
         authorization_url: initData.data.authorization_url,
         ...paymentResult,
       });
-    } else {
-      // Handle other methods (e.g., etegram) as before
-      console.log("[Payment] Initialized:", {
-        sessionId: body.sessionId,
+    } else if (body.method === "etegram") {
+      // For Etegram, create checkout URL
+      const checkoutUrl = `${request.nextUrl.origin}/payment/etegram/checkout?ref=${reference}`;
+
+      // Update payment with checkout URL
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: { checkoutUrl },
+      });
+
+      console.log("[Panel Payment] Initialized:", {
+        panelId: panel.id,
+        paymentId: payment.id,
         method: body.method,
         reference,
-        amount: body.amount,
-        email: body.attendeeEmail,
+        amount: totalAmount,
+        email: body.ownerEmail,
         timestamp: new Date().toISOString(),
       });
 
-      return NextResponse.json({ success: true, reference, ...paymentResult });
+      return NextResponse.json({
+        success: true,
+        reference,
+        checkoutUrl,
+        ...paymentResult,
+      });
+    } else {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unsupported payment method",
+        },
+        { status: 400 }
+      );
     }
   } catch (error) {
-    console.error("[Payment] Initialization error:", error);
+    console.error("[Panel Payment] Initialization error:", error);
     return NextResponse.json(
       {
         success: false,
@@ -186,5 +260,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-// SDK-only mode: provider initialization helpers removed

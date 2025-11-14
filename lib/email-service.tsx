@@ -14,7 +14,7 @@ export async function sendEmail(
   try {
     // Example: Using Resend (uncomment when configured)
     // const response = await resend.emails.send({
-    //   from: 'noreply@ibomtechweek.com',
+    //   from: 'noreply@instantotp.com',
     //   to: payload.to,
     //   subject: payload.subject,
     //   html: payload.html,
@@ -36,55 +36,62 @@ export async function sendEmail(
 }
 
 /**
- * Send ticket confirmation email
+ * Send panel registration confirmation email
  */
-export async function sendTicketConfirmation(
+export async function sendPanelConfirmation(
   email: string,
   name: string,
   transactionId: string,
-  tickets: Array<{ ticketType: string; quantity: number; price: number }>,
+  panels: Array<{ panelName: string; subdomain: string; price: number }>,
   totalAmount: number
 ) {
-  const ticketsList = tickets
-    .map((t) => `${t.ticketType}: ${t.quantity} × ₦${t.price.toLocaleString()}`)
+  const panelsList = panels
+    .map(
+      (p) =>
+        `${p.panelName}: ${
+          p.subdomain
+        }.instantotp.com - ₦${p.price.toLocaleString()}`
+    )
     .join("\n");
 
   const html = `
-    <h2>Ticket Confirmation - Akwa Ibom Tech Week 2025</h2>
+    <h2>Panel Registration Confirmation - InstantOTP</h2>
     <p>Dear ${name},</p>
-    <p>Your tickets have been confirmed!</p>
+    <p>Your child panel has been successfully registered!</p>
     <p><strong>Transaction ID:</strong> ${transactionId}</p>
-    <p><strong>Tickets:</strong></p>
-    <pre>${ticketsList}</pre>
+    <p><strong>Panels:</strong></p>
+    <pre>${panelsList}</pre>
     <p><strong>Total Amount:</strong> ₦${totalAmount.toLocaleString()}</p>
+    <p>You can now access your panel dashboard and start configuring your SMS verification services.</p>
   `;
 
   return sendEmail({
     to: email,
-    subject: "Your Akwa Ibom Tech Week 2025 Tickets - Confirmation",
+    subject: "Your InstantOTP Child Panel - Registration Confirmed",
     html,
   });
 }
 
 /**
- * Send event reminder email
+ * Send panel activation reminder email
  */
-export async function sendEventReminder(
+export async function sendPanelActivationReminder(
   email: string,
   name: string,
-  eventDate: string,
-  location: string
+  panelName: string,
+  subdomain: string
 ) {
   const html = `
-    <h2>Event Reminder - Akwa Ibom Tech Week 2025</h2>
+    <h2>Panel Activation Reminder - InstantOTP</h2>
     <p>Hi ${name},</p>
-    <p>This is a reminder that Akwa Ibom Tech Week 2025 is happening on ${eventDate} at ${location}.</p>
-    <p>See you there!</p>
+    <p>This is a reminder that your panel "${panelName}" (${subdomain}.instantotp.com) is ready for activation.</p>
+    <p>Please complete the payment process to start earning from your SMS verification services.</p>
+    <p>Access your dashboard at: https://${subdomain}.instantotp.com</p>
   `;
 
   return sendEmail({
     to: email,
-    subject: "Reminder: Akwa Ibom Tech Week 2025 is Coming Soon",
+    subject: "Reminder: Activate Your InstantOTP Child Panel",
     html,
   });
 }

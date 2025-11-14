@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
+import * as brevo from "@getbrevo/brevo";
 import { PrismaClient } from "@prisma/client";
 
 export const runtime = "nodejs";
 
 const prisma = new PrismaClient();
 
-const smtpHost = process.env.SMTP_HOST;
-const smtpPort = process.env.SMTP_PORT;
-const smtpUser = process.env.SMTP_USER;
-const smtpPass = process.env.SMTP_PASS;
-const contactRecipient = process.env.CONTACT_EMAIL;
+const apiInstance = new brevo.TransactionalEmailsApi();
+apiInstance.setApiKey(
+  brevo.TransactionalEmailsApiApiKeys.apiKey,
+  process.env.BREVO_API_KEY!
+);
+
+const contactRecipient = process.env.CONTACT_EMAIL || "support@instantotp.com";
 
 function escapeHtml(value: string) {
   return value
@@ -21,18 +23,8 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;");
 }
 
-function assertEmailConfig() {
-  if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !contactRecipient) {
-    throw new Error(
-      "Contact email configuration is missing. Check SMTP_* and CONTACT_EMAIL env vars."
-    );
-  }
-}
-
 export async function POST(request: Request) {
   try {
-    assertEmailConfig();
-
     const { name, email, phone, message } = await request.json();
 
     const trimmedName = typeof name === "string" ? name.trim() : "";
@@ -57,33 +49,29 @@ export async function POST(request: Request) {
       },
     });
 
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: Number.parseInt(smtpPort!, 10),
-      secure: Number.parseInt(smtpPort!, 10) === 465,
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `${trimmedName} <${trimmedEmail}>`,
-      to: contactRecipient,
-      replyTo: trimmedEmail,
-      subject: `InstantOTP contact form from ${trimmedName}`,
-      text: trimmedMessage,
-      html: `<p><strong>Name:</strong> ${escapeHtml(
-        trimmedName
-      )}</p><p><strong>Email:</strong> ${escapeHtml(trimmedEmail)}</p>${
+    // Send email using Brevo
+    const sendSmtpEmail = new brevo.SendSmtpEmail();
+    sendSmtpEmail.sender = {
+      name: "InstantOTP Contact",
+      email: "noreply@etegram.com",
+    };
+    sendSmtpEmail.to = [{ email: contactRecipient }];
+    sendSmtpEmail.replyTo = { email: trimmedEmail, name: trimmedName };
+    sendSmtpEmail.subject = `InstantOTP contact form from ${trimmedName}`;
+    sendSmtpEmail.htmlContent = `
+      <h2>New Contact Form Submission</h2>
+      <p><strong>Name:</strong> ${escapeHtml(trimmedName)}</p>
+      <p><strong>Email:</strong> ${escapeHtml(trimmedEmail)}</p>
+      ${
         trimmedPhone
           ? `<p><strong>Phone:</strong> ${escapeHtml(trimmedPhone)}</p>`
           : ""
-      }<p><strong>Message:</strong></p><p>${escapeHtml(trimmedMessage).replace(
-        /\n/g,
-        "<br/>"
-      )}</p>`,
-    });
+      }
+      <p><strong>Message:</strong></p>
+      <p>${escapeHtml(trimmedMessage).replace(/\n/g, "<br/>")}</p>
+    `;
+
+    await apiInstance.sendTransacEmail(sendSmtpEmail);
 
     return NextResponse.json(
       { message: "Message sent successfully" },

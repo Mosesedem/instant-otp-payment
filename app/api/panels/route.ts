@@ -1,22 +1,13 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
-type AuthSession = Awaited<ReturnType<typeof auth>>;
-
-function getSessionUserId(session: AuthSession): string | null {
-  const id = (session?.user as { id?: unknown } | undefined)?.id;
-  return typeof id === "string" ? id : null;
-}
-
-export async function GET(_request: Request) {
+export async function GET(request: Request) {
   try {
-    const session = await auth();
-
-    const userId = getSessionUserId(session);
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
 
     if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "User ID required" }, { status: 400 });
     }
 
     const panels = await prisma.panel.findMany({
@@ -64,27 +55,11 @@ export async function GET(_request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await auth();
-
-    console.log(
-      "[v0] Session in POST /api/panels:",
-      JSON.stringify(session, null, 2)
-    );
-
-    const userId = getSessionUserId(session);
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized - No user ID in session" },
-        { status: 401 }
-      );
-    }
-
-    const { name, subdomain, customDomain, ownerEmail, ownerPhone } =
+    const { name, subdomain, customDomain, ownerEmail, ownerPhone, userId } =
       await request.json();
 
     // Validate required fields
-    if (!name || !subdomain || !ownerEmail || !ownerPhone || !customDomain) {
+    if (!name || !subdomain || !ownerEmail || !ownerPhone || !userId) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -112,6 +87,21 @@ export async function POST(request: Request) {
       );
     }
 
+    // Find or create user
+    let user = await prisma.user.findUnique({
+      where: { email: ownerEmail },
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: ownerEmail,
+          name: name,
+          phone: ownerPhone,
+        },
+      });
+    }
+
     const panel = await prisma.panel.create({
       data: {
         name,
@@ -120,7 +110,7 @@ export async function POST(request: Request) {
         ownerEmail,
         ownerPhone,
         status: "active",
-        userId,
+        userId: user.id,
         domains: customDomain
           ? {
               create: {

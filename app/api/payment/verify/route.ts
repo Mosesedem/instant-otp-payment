@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { PaymentStatus } from "@prisma/client";
 
 interface VerifyRequest {
   reference: string;
@@ -48,21 +49,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update purchase status in database
-    if (verificationResult.success) {
+    // Update payment and panel status in database
+    if (verificationResult.success && verificationResult.status === "success") {
       try {
-        await prisma.purchase.update({
-          where: { reference: body.reference },
-          data: {
-            status:
-              verificationResult.status === "success" ? "verified" : "failed",
-            completedAt: new Date(),
-            metadata: {
-              ...verificationResult.metadata,
-              paidAt: verificationResult.paidAt,
-              channel: verificationResult.channel,
+        await prisma.$transaction(async (tx) => {
+          // Update payment status
+          await tx.payment.update({
+            where: { reference: body.reference },
+            data: {
+              status: PaymentStatus.COMPLETED,
+              paidAt: new Date(),
+              metadata: {
+                ...verificationResult.metadata,
+                paidAt: verificationResult.paidAt,
+                channel: verificationResult.channel,
+              },
             },
-          },
+          });
+
+          // Find the payment to get panel ID
+          const payment = await tx.payment.findUnique({
+            where: { reference: body.reference },
+            select: { panelId: true },
+          });
+
+          if (payment?.panelId) {
+            // Update panel payment status
+            await tx.panel.update({
+              where: { id: payment.panelId },
+              data: {
+                paymentStatus: PaymentStatus.COMPLETED,
+              },
+            });
+          }
         });
       } catch (dbError) {
         console.error("[Payment] Database update error:", dbError);
@@ -79,11 +98,11 @@ export async function POST(request: NextRequest) {
     } else {
       // Update as failed
       try {
-        await prisma.purchase.update({
+        await prisma.payment.update({
           where: { reference: body.reference },
           data: {
-            status: "failed",
-            completedAt: new Date(),
+            status: PaymentStatus.FAILED,
+            paidAt: new Date(),
           },
         });
       } catch (dbError) {
@@ -123,31 +142,49 @@ export async function GET(request: NextRequest) {
     const verificationResult = await verifyPaystackPayment(reference);
 
     // Update database
-    if (verificationResult.success) {
+    if (verificationResult.success && verificationResult.status === "success") {
       try {
-        await prisma.purchase.update({
-          where: { reference },
-          data: {
-            status:
-              verificationResult.status === "success" ? "verified" : "failed",
-            completedAt: new Date(),
-            metadata: {
-              ...verificationResult.metadata,
-              paidAt: verificationResult.paidAt,
-              channel: verificationResult.channel,
+        await prisma.$transaction(async (tx) => {
+          // Update payment status
+          await tx.payment.update({
+            where: { reference },
+            data: {
+              status: PaymentStatus.COMPLETED,
+              paidAt: new Date(),
+              metadata: {
+                ...verificationResult.metadata,
+                paidAt: verificationResult.paidAt,
+                channel: verificationResult.channel,
+              },
             },
-          },
+          });
+
+          // Find the payment to get panel ID
+          const payment = await tx.payment.findUnique({
+            where: { reference },
+            select: { panelId: true },
+          });
+
+          if (payment?.panelId) {
+            // Update panel payment status
+            await tx.panel.update({
+              where: { id: payment.panelId },
+              data: {
+                paymentStatus: PaymentStatus.COMPLETED,
+              },
+            });
+          }
         });
       } catch (dbError) {
         console.error("[Payment] Database update error:", dbError);
       }
     } else {
       try {
-        await prisma.purchase.update({
+        await prisma.payment.update({
           where: { reference },
           data: {
-            status: "failed",
-            completedAt: new Date(),
+            status: PaymentStatus.FAILED,
+            paidAt: new Date(),
           },
         });
       } catch (dbError) {

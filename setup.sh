@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# IBOM Tech Week - Setup Script
-echo "🚀 IBOM Tech Week Setup"
-echo "======================="
+# InstantOTP Child Panel Services - Setup Script
+echo "🚀 InstantOTP Child Panel Services Setup"
+echo "=========================================="
 echo ""
 
 # Check if .env exists
@@ -57,8 +57,8 @@ case $choice in
         echo "Setting up local PostgreSQL..."
         echo "Please ensure PostgreSQL is installed and running"
         echo ""
-        read -p "Enter database name (default: ibom_tech_week): " dbname
-        dbname=${dbname:-ibom_tech_week}
+        read -p "Enter database name (default: instantotp_panels): " dbname
+        dbname=${dbname:-instantotp_panels}
         
         read -p "Enter PostgreSQL username (default: postgres): " dbuser
         dbuser=${dbuser:-postgres}

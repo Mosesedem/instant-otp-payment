@@ -15,7 +15,11 @@ import Link from "next/link";
 type DomainStatus = "idle" | "checking" | "valid" | "invalid";
 type SubdomainStatus = "idle" | "checking" | "valid" | "invalid";
 
-export function CreatePanelForm() {
+interface CreatePanelFormProps {
+  onSubmit?: (data: any) => void;
+}
+
+export function CreatePanelForm({ onSubmit }: CreatePanelFormProps = {}) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,9 +143,23 @@ export function CreatePanelForm() {
       }
 
       setSuccess(true);
-      setTimeout(() => {
-        router.push("/payment");
-      }, 2000);
+      const panelData = {
+        id: data.id,
+        name: panelName,
+        subdomain,
+        customDomain,
+        ownerName: panelName, // Using panel name as owner name for now
+        ownerEmail,
+        ownerPhone,
+        paymentStatus: "PENDING",
+      };
+      if (onSubmit) {
+        onSubmit(panelData);
+      } else {
+        setTimeout(() => {
+          router.push("/payment");
+        }, 2000);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -178,15 +196,6 @@ export function CreatePanelForm() {
         return null;
     }
   };
-
-  if (status === "loading") {
-    return (
-      <Alert>
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <AlertDescription>Loading...</AlertDescription>
-      </Alert>
-    );
-  }
 
   if (success) {
     return (

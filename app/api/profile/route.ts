@@ -1,18 +1,16 @@
 import { NextResponse } from "next/server";
 import { PrismaClient, Prisma } from "@prisma/client";
-import { auth } from "@/lib/auth";
 
 const prisma = new PrismaClient();
 
 export async function PATCH(request: Request) {
   try {
-    const session = await auth();
+    const body = await request.json();
+    const { userId, name, username, phone, image } = body;
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ error: "User ID required" }, { status: 400 });
     }
-
-    const { name, username, phone, image } = await request.json();
 
     const updateData: Prisma.UserUpdateInput = {
       ...(typeof name === "string" ? { name } : {}),
@@ -29,7 +27,7 @@ export async function PATCH(request: Request) {
     }
 
     const user = await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: userId },
       data: updateData,
       select: {
         id: true,

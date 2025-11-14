@@ -5,13 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
-import { useSession } from "@/hooks/use-session";
 import { toast } from "sonner";
 
 function PaymentCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { completePayment } = useSession();
   const [status, setStatus] = useState<"verifying" | "success" | "failed">(
     "verifying"
   );
@@ -37,37 +35,20 @@ function PaymentCallbackContent() {
           },
           body: JSON.stringify({
             reference,
-            method: "paystack",
+            method: "etegram",
           }),
         });
 
         const result = await response.json();
 
         if (result.success && result.data.status === "success") {
-          // Get pending payment info from localStorage
-          const pendingPayment = localStorage.getItem("pendingPayment");
-          if (pendingPayment) {
-            const paymentInfo = JSON.parse(pendingPayment);
-
-            // Save payment to session
-            completePayment("paystack", {
-              transactionId: reference,
-              amount: paymentInfo.amount,
-              method: "paystack",
-            });
-
-            // Clear localStorage
-            localStorage.removeItem("pendingPayment");
-          }
-
           setStatus("success");
           setMessage("Payment successful! Redirecting...");
           toast.success("Payment successful!");
 
           // Redirect to success page after 2 seconds
           setTimeout(() => {
-            window.location.href =
-              "/?trxref=" + reference + "&reference=" + reference;
+            window.location.href = "/?payment=success&reference=" + reference;
           }, 2000);
         } else {
           setStatus("failed");
@@ -83,10 +64,10 @@ function PaymentCallbackContent() {
     };
 
     verifyPayment();
-  }, [searchParams, completePayment, router]);
+  }, [searchParams, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-linear-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-center">Payment Status</CardTitle>
@@ -131,7 +112,7 @@ export default function PaymentCallback() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
+        <div className="min-h-screen flex items-center justify-center p-4 bg-linear-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
           <Card className="w-full max-w-md">
             <CardHeader>
               <CardTitle className="text-center">Payment Status</CardTitle>

@@ -2,7 +2,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-import { sendTicketEmail } from "@/lib/email";
+import { sendPanelEmail } from "@/lib/email";
+import { PaymentStatus } from "@prisma/client";
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY!;
 
@@ -13,50 +14,6 @@ function verifyPaystackSignature(body: string, signature: string): boolean {
     .update(body)
     .digest("hex");
   return hash === signature;
-}
-
-// Generate unique ticket ID
-function generateTicketId(): string {
-  const prefix = "AKTW-2025";
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-  return `${prefix}-${timestamp}-${random}`;
-}
-
-// Helper: Derive individual ticket price if missing (pro-rate total amount across tickets)
-function deriveTicketPrice(
-  totalAmount: number,
-  tickets: Array<{ ticketType: string; quantity: number; price?: number }>
-): Array<{ ticketType: string; quantity: number; price: number }> {
-  let totalQuantity = tickets.reduce((sum, t) => sum + t.quantity, 0);
-  let totalKnownPrice = 0;
-  let knownQuantity = 0;
-
-  // Calculate sum of known prices and their quantities
-  tickets.forEach((t) => {
-    if (t.price && t.price > 0) {
-      totalKnownPrice += t.price * t.quantity;
-      knownQuantity += t.quantity;
-    }
-  });
-
-  // If all prices known, return as-is
-  if (knownQuantity === totalQuantity) {
-    return tickets.map((t) => ({ ...t, price: t.price! })); // Assert non-null
-  }
-
-  // Pro-rate: Use totalAmount for missing portions
-  const avgPrice = totalAmount / totalQuantity;
-  const missingQuantity = totalQuantity - knownQuantity;
-  const missingTotal = avgPrice * missingQuantity;
-
-  // For simplicity, assign avgPrice to missing tickets (improve with per-type pricing if needed)
-  return tickets.map((t) => {
-    if (t.price && t.price > 0) {
-      return { ...t, price: t.price };
-    }
-    return { ...t, price: avgPrice };
-  });
 }
 
 export async function POST(req: NextRequest) {
@@ -92,23 +49,39 @@ export async function POST(req: NextRequest) {
     const reference = data.reference;
     const amount = data.amount / 100; // Convert from kobo to naira
 
-    console.log("Processing payment for reference:", reference);
+    console.log("Processing Paystack payment for reference:", reference);
 
-    // Find the purchase record
-    const purchase = await prisma.purchase.findUnique({
-      where: { reference },
+    // Find the payment record
+    const payment = await prisma.payment.findFirst({
+      where: {
+        reference: reference,
+      },
+      include: {
+        panel: true,
+        user: true,
+      },
     });
 
-    if (!purchase) {
-      console.error("Purchase not found for reference:", reference);
+    if (!payment) {
+      console.error("Payment not found for reference:", reference);
+      return NextResponse.json({ error: "Payment not found" }, { status: 404 });
+    }
+
+    if (!payment.panel) {
+      console.error("Panel not found for payment:", reference);
+      return NextResponse.json({ error: "Panel not found" }, { status: 404 });
+    }
+
+    if (!payment.user.email) {
+      console.error("User email not found for payment:", reference);
       return NextResponse.json(
-        { error: "Purchase not found" },
+        { error: "User email not found" },
         { status: 404 }
       );
     }
 
-    // Check if already processed (fixed typo: "successfulo" -> "successful")
-    if (purchase.status === "successful") {
+    // Check if already processed
+    if (payment.status === PaymentStatus.COMPLETED) {
       console.log("Payment already processed:", reference);
       return NextResponse.json({
         received: true,
@@ -116,153 +89,77 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Extract metadata
-    const sessionId = data.metadata?.sessionId || purchase.sessionId;
-    // Fix: Parse JSON safely and derive prices if missing
-    let tickets;
-    try {
-      tickets =
-        typeof purchase.tickets === "string"
-          ? JSON.parse(purchase.tickets)
-          : purchase.tickets;
-    } catch (parseError) {
-      console.error("Invalid tickets JSON:", parseError);
-      return NextResponse.json(
-        { error: "Invalid purchase data" },
-        { status: 400 }
+    // Verify amount matches
+    const expectedAmount = payment.amount;
+    const receivedAmount = amount;
+
+    if (Math.abs(receivedAmount - expectedAmount) > 1) {
+      console.error(
+        `Amount mismatch. Expected: ${expectedAmount}, Received: ${receivedAmount}`
       );
-    }
-    const typedTickets = tickets as Array<{
-      ticketType: string;
-      quantity: number;
-      price?: number; // Allow optional for safety
-    }>;
-
-    // Derive prices if any are missing (new helper)
-    const ticketsWithPrices = deriveTicketPrice(amount, typedTickets);
-    console.log("Tickets with derived prices:", ticketsWithPrices);
-
-    // Calculate total tickets
-    const totalTickets = ticketsWithPrices.reduce(
-      (sum, t) => sum + t.quantity,
-      0
-    );
-
-    // Generate ticket IDs for each individual ticket
-    const generatedTickets: Array<{
-      ticketId: string;
-      ticketType: string;
-      attendeeName: string;
-      attendeeEmail: string;
-      attendeePhone: string | null;
-      attendeeCompany: string | null;
-      attendeeJobTitle: string | null;
-      purchaseReference: string;
-      amount: number;
-      purchaseDate: Date;
-    }> = [];
-
-    // Generate ticket IDs based on quantity
-    for (const ticket of ticketsWithPrices) {
-      // Use ticketsWithPrices
-      for (let i = 0; i < ticket.quantity; i++) {
-        generatedTickets.push({
-          ticketId: generateTicketId(),
-          ticketType: ticket.ticketType,
-          attendeeName: purchase.attendeeName,
-          attendeeEmail: purchase.attendeeEmail,
-          attendeePhone: purchase.attendeePhone,
-          attendeeCompany: purchase.attendeeCompany,
-          attendeeJobTitle: purchase.attendeeJobTitle,
-          purchaseReference: reference,
-          amount: ticket.price!, // Now guaranteed non-null
-          purchaseDate: new Date(),
-        });
-      }
+      return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
     }
 
-    // Validate generated tickets have prices
-    const ticketsWithoutPrice = generatedTickets.filter(
-      (t) => !t.amount || t.amount <= 0
-    );
-    if (ticketsWithoutPrice.length > 0) {
-      console.error("Generated tickets missing prices:", ticketsWithoutPrice);
-      return NextResponse.json(
-        { error: "Invalid ticket prices" },
-        { status: 400 }
-      );
-    }
-
-    // Create tickets in database (using transaction)
+    // Update payment and panel status
     await prisma.$transaction(async (tx: any) => {
-      // Update purchase status
-      await tx.purchase.update({
-        where: { id: purchase.id },
+      // Update payment status
+      await tx.payment.update({
+        where: { id: payment.id },
         data: {
-          status: "successful",
+          status: PaymentStatus.COMPLETED,
           completedAt: new Date(),
           metadata: {
-            ...((purchase.metadata as any) || {}),
+            ...((payment.metadata as any) || {}),
             paystackData: data,
-            ticketIds: generatedTickets.map((t) => t.ticketId),
           },
         },
       });
 
-      // Create ticket records
-      await tx.ticket.createMany({
-        data: generatedTickets.map((ticket) => ({
-          ticketId: ticket.ticketId,
-          purchaseId: purchase.id,
-          reference: purchase.reference,
-          ticketType: ticket.ticketType,
-          attendeeName: ticket.attendeeName,
-          attendeeEmail: ticket.attendeeEmail,
-          attendeePhone: ticket.attendeePhone,
-          attendeeCompany: ticket.attendeeCompany,
-          attendeeJobTitle: ticket.attendeeJobTitle,
-          price: ticket.amount, // Now safe
-          status: "active",
-        })),
+      // Update panel payment status
+      await tx.panel.update({
+        where: { id: payment.panelId },
+        data: {
+          paymentStatus: PaymentStatus.COMPLETED,
+        },
       });
     });
 
-    console.log(
-      `Created ${generatedTickets.length} tickets for reference:`,
-      reference
-    );
+    console.log(`Payment processed successfully for reference:`, reference);
 
-    // Send emails (unchanged, but now with valid prices)
+    // Send emails
     try {
-      // 1. Send email to customer with all their tickets
-      await sendTicketEmail({
-        to: purchase.attendeeEmail,
-        attendeeName: purchase.attendeeName,
-        tickets: generatedTickets,
-        totalAmount: amount,
+      const panelData = {
+        panelId: payment.panel!.id,
+        panelName: payment.panel!.name || "Untitled Panel",
+        subdomain: payment.panel!.subdomain,
+        customDomain: payment.panel!.customDomain || undefined,
+        ownerName: payment.user.name || payment.panel!.name || "Panel Owner",
+        ownerEmail: payment.user.email!,
+        ownerPhone: null, // Could be added to user/panel schema
+        paymentReference: reference,
+        amount: payment.amount,
+        paymentDate: new Date(),
+        paymentStatus: PaymentStatus.COMPLETED,
+      };
+
+      // 1. Send email to panel owner
+      await sendPanelEmail({
+        to: payment.user.email!,
+        ownerName: panelData.ownerName,
+        panels: [panelData],
+        totalAmount: payment.amount,
         reference: reference,
       });
 
-      // 2. Send email to Moniecheap admin
-      await sendTicketEmail({
-        to: "ceo@etegramgroup.com",
-        attendeeName: "Emem Edem",
-        tickets: generatedTickets,
-        totalAmount: amount,
+      // 2. Send email to admin
+      await sendPanelEmail({
+        to: "admin@instantotp.com",
+        ownerName: "Admin",
+        panels: [panelData],
+        totalAmount: payment.amount,
         reference: reference,
         isAdmin: true,
-        customerEmail: purchase.attendeeEmail,
-      });
-
-      // 3. Send email to sales team
-      await sendTicketEmail({
-        to: "president@ibominnovation.org",
-        attendeeName: "Mr. President",
-        tickets: generatedTickets,
-        totalAmount: amount,
-        reference: reference,
-        isAdmin: true,
-        customerEmail: purchase.attendeeEmail,
+        customerEmail: payment.user.email!,
       });
 
       console.log("All emails sent successfully for reference:", reference);
@@ -274,12 +171,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       received: true,
       message: "Payment processed successfully",
-      ticketCount: generatedTickets.length,
     });
   } catch (error) {
-    console.error("Webhook error:", error);
+    console.error("Paystack webhook error:", error);
     return NextResponse.json(
-      { error: "Webhook processing failed" },
+      {
+        error: "Webhook processing failed",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }
