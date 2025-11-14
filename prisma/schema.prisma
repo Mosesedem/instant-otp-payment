@@ -8,102 +8,166 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
-model Purchase {
-  id              String   @id @default(cuid())
-  sessionId       String
-  reference       String   @unique
-  status          String   // 'attempted', 'successful', 'failed'
-  paymentMethod   String   // 'etegram', 'paystack'
-  amount          Float
-  
-  // Attendee Information
-  attendeeEmail   String
-  attendeeName    String
-  attendeePhone   String?
-  attendeeCompany String?
-  attendeeJobTitle String?
-  
-  // Tickets purchased
-  tickets         Json     // Array of {ticketType, quantity, price}
-  
-  // Payment metadata
-  metadata        Json?    // Additional payment data
-  
-  // Timestamps
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  completedAt     DateTime?
-  
-  // Relations
-  ticketRecords   Ticket[]
-  
-  @@index([sessionId])
-  @@index([attendeeEmail])
-  @@index([status])
-  @@index([createdAt])
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
 }
 
-model Ticket {
-  id              String   @id @default(cuid())
-  ticketId        String   @unique  // e.g., AITW-LKJH123-ABC456
-  purchaseId      String
-  reference       String   // Payment reference
-  
-  // Ticket details
-  ticketType      String   // 'Regular', 'VIP', 'Student', etc.
-  status          String   @default("active") // 'active', 'used', 'cancelled'
-  
-  // Attendee information
-  attendeeName    String
-  attendeeEmail   String
-  attendeePhone   String?
-  attendeeCompany String?
-  attendeeJobTitle String?
-  
-  // Pricing
-  price           Float
-  
-  // Check-in tracking
-  checkedInAt     DateTime?
-  checkedInBy     String?  // Staff member who checked in
-  
-  // Timestamps
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
-  purchase        Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
-  
-  @@index([ticketId])
-  @@index([purchaseId])
-  @@index([reference])
-  @@index([attendeeEmail])
-  @@index([status])
-  @@index([createdAt])
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// Stores anonymous session-based draft/progress of the checkout form
-model SessionDraft {
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  username      String?   @unique
+  phone         String?   @unique
+  password      String?
+  accounts      Account[]
+  sessions      Session[]
+  panels        Panel[]
+  payments      Payment[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Contact {
   id        String   @id @default(cuid())
-  sessionId String   @unique
-
-  // Snapshot of cart and attendee info tracked client-side
-  cart      Json
-  attendee  Json?
-  payment   Json?
-
-  // Optional high-level status and last step identifier
-  status    String?   // e.g., 'in_progress', 'completed'
-  lastStep  String?   // e.g., 'tickets' | 'attendee' | 'payment' | 'success'
-
-  // Arbitrary draft payload (e.g., attendee form progress)
-  draft     Json?
-
+  name      String
+  email     String
+  phone     String?
+  message   String   @db.Text
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+}
 
-  @@index([updatedAt])
+// Your existing Panel model (update user relation)
+model Panel {
+  id              String        @id @default(cuid())
+  name            String?
+  subdomain       String        @unique
+  customDomain    String?       @unique @map("custom_domain")
+  domain          String?
+  ownerEmail      String        @map("owner_email")
+  ownerPhone      String        @map("owner_phone")
+  status          String        @default("pending")
+  vercelProjectId String?       @map("vercel_project_id")
+  userId          String        @map("user_id")
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  isActive        Boolean       @default(true)
+  description     String?
+  paymentStatus   PaymentStatus @default(PENDING)
+  setupPaid       Boolean       @default(false)
+  subscription    Subscription?
+  payments        Payment[]
+  domains         Domain[]
+
+  @@map("panels")
+}
+
+model Domain {
+  id                 String   @id @default(cuid())
+  panelId            String   @map("panel_id")
+  panel              Panel    @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  domain             String
+  verificationStatus String   @default("pending") @map("verification_status")
+  dnsRecords         Json?    @map("dns_records")
+  vercelDomainId     String?  @map("vercel_domain_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([panelId, domain])
+  @@map("domains")
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  panelId       String?
+  panel         Panel?        @relation(fields: [panelId], references: [id], onDelete: SetNull)
+  amount        Float
+  currency      String        @default("NGN")
+  type          PaymentType
+  status        PaymentStatus @default(PENDING)
+  reference     String        @unique
+  paymentMethod String?
+  provider      String?
+  externalId    String?
+  checkoutUrl   String?
+  metadata      Json?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  panelId            String             @unique
+  panel              Panel              @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  plan               SubscriptionPlan
+  status             SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean            @default(false)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+enum PaymentType {
+  SETUP_FEE
+  MONTHLY_SUBSCRIPTION
+  ANNUAL_SUBSCRIPTION
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum SubscriptionPlan {
+  MONTHLY
+  ANNUAL
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  PAUSED
 }
