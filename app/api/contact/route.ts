@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     const sendSmtpEmail = new brevo.SendSmtpEmail();
     sendSmtpEmail.sender = {
       name: "InstantOTP Contact",
-      email: "noreply@etegram.com",
+      email: "noreply@instantotp.com",
     };
     sendSmtpEmail.to = [{ email: contactRecipient }];
     sendSmtpEmail.replyTo = { email: trimmedEmail, name: trimmedName };

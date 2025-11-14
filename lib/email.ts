@@ -247,7 +247,7 @@ export async function sendPanelEmail(params: EmailParams): Promise<void> {
   const sendSmtpEmail = new brevo.SendSmtpEmail();
   sendSmtpEmail.sender = {
     name: "InstantOTP",
-    email: "noreply@etegram.com",
+    email: "noreply@instantotp.com",
   };
   sendSmtpEmail.to = [{ email: to, name: params.ownerName }];
   sendSmtpEmail.subject = isAdmin

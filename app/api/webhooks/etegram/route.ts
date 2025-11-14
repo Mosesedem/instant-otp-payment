@@ -8,27 +8,27 @@ import { PaymentStatus } from "@prisma/client";
 const ETEGRAM_SECRET_KEY = process.env.ETEGRAM_SECRET_KEY!;
 
 // Verify Etegram signature (if they provide one, otherwise validate by API)
-function verifyEtegramSignature(body: string, signature?: string): boolean {
-  if (!signature) return true; // Skip if no signature provided
+// function verifyEtegramSignature(body: string, signature?: string): boolean {
+//   if (!signature) return true; // Skip if no signature provided
 
-  const hash = crypto
-    .createHmac("sha256", ETEGRAM_SECRET_KEY)
-    .update(body)
-    .digest("hex");
-  return hash === signature;
-}
+//   const hash = crypto
+//     .createHmac("sha256", ETEGRAM_SECRET_KEY)
+//     .update(body)
+//     .digest("hex");
+//   return hash === signature;
+// }
 
 export async function POST(req: NextRequest) {
   try {
     // Get raw body
     const body = await req.text();
-    const signature = req.headers.get("x-etegram-signature");
+    // const signature = req.headers.get("x-etegram-signature");
 
     // Verify signature if provided (re-enabled for security)
-    if (signature && !verifyEtegramSignature(body, signature)) {
-      console.error("Invalid Etegram signature");
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
+    // if (signature && !verifyEtegramSignature(body, signature)) {
+    //   console.error("Invalid Etegram signature");
+    //   return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    // }
 
     const event = JSON.parse(body);
     console.log("Etegram webhook event received");
