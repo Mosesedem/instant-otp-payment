@@ -123,9 +123,9 @@ export default function Home() {
                 <Image
                   src="/images/hero.svg"
                   alt="Hero Image"
-                  layout="fill"
-                  // objectFit="cover"
-                  className="rounded-xl animate-spin spin-outslow"
+                  fill
+                  // style={{ objectFit: "cover" }}
+                  className=" animate-spin spin-outslow"
                 />
               </div>
             </div>

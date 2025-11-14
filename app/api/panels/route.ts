@@ -6,9 +6,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
 
-    if (!userId) {
-      return NextResponse.json({ error: "User ID required" }, { status: 400 });
-    }
+    // if (!userId) {
+    //   return NextResponse.json({ error: "User ID required" }, { status: 400 });
+    // }
 
     const panels = await prisma.panel.findMany({
       where: {
@@ -55,11 +55,18 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { name, subdomain, customDomain, ownerEmail, ownerPhone, userId } =
-      await request.json();
+    const {
+      name,
+      subdomain,
+      customDomain,
+      ownerEmail,
+      ownerPhone,
+      ownerName,
+      userId,
+    } = await request.json();
 
     // Validate required fields
-    if (!name || !subdomain || !ownerEmail || !ownerPhone || !userId) {
+    if (!name || !subdomain || !ownerEmail || !ownerPhone) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -96,7 +103,7 @@ export async function POST(request: Request) {
       user = await prisma.user.create({
         data: {
           email: ownerEmail,
-          name: name,
+          name: ownerName,
           phone: ownerPhone,
         },
       });
@@ -109,6 +116,7 @@ export async function POST(request: Request) {
         customDomain: customDomain || null,
         ownerEmail,
         ownerPhone,
+        ownerName,
         status: "active",
         userId: user.id,
         domains: customDomain

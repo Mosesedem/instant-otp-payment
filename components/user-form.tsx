@@ -29,6 +29,7 @@ export function CreatePanelForm({ onSubmit }: CreatePanelFormProps = {}) {
   const [panelName, setPanelName] = useState("");
   const [subdomain, setSubdomain] = useState("");
   const [customDomain, setCustomDomain] = useState("");
+  const [ownerName, setOwnerName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
 
@@ -132,6 +133,7 @@ export function CreatePanelForm({ onSubmit }: CreatePanelFormProps = {}) {
           subdomain,
           customDomain: customDomain || null,
           ownerEmail,
+          ownerName,
           ownerPhone,
         }),
       });
@@ -147,9 +149,9 @@ export function CreatePanelForm({ onSubmit }: CreatePanelFormProps = {}) {
         id: data.id,
         name: panelName,
         subdomain,
-        customDomain,
-        ownerName: panelName, // Using panel name as owner name for now
+        customDomain, // Using panel name as owner name for now
         ownerEmail,
+        ownerName,
         ownerPhone,
         paymentStatus: "PENDING",
       };
@@ -300,6 +302,20 @@ export function CreatePanelForm({ onSubmit }: CreatePanelFormProps = {}) {
         )}
       </div>
 
+      <div className="space-y-2">
+        <Label htmlFor="ownerName">Owner Name *</Label>
+        <Input
+          id="ownerName"
+          type="text"
+          placeholder="Elon Musk"
+          value={ownerName}
+          onChange={(e) => setOwnerName(e.target.value)}
+          required
+        />
+        <p className="text-sm text-muted-foreground">
+          Email address of the panel owner
+        </p>
+      </div>
       <div className="space-y-2">
         <Label htmlFor="ownerEmail">Owner Email *</Label>
         <Input

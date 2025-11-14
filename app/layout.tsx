@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   description:
     "Register for the InstantOTP child panel and start making money from your own platform.",
   icons: {
-    icon: "/images/icon-white.svg",
-    apple: "/images/icon-white.svg",
+    icon: "/images/logo.svg",
+    apple: "/images/logo.svg",
   },
   keywords:
     "InstantOTP, OTP, payment, gateway, child panel, registration, sign up, earn money, platform, online payments",

@@ -78,6 +78,7 @@ model Panel {
   subdomain       String        @unique
   customDomain    String?       @unique @map("custom_domain")
   domain          String?
+  ownerName       String        @map("owner_name")
   ownerEmail      String        @map("owner_email")
   ownerPhone      String        @map("owner_phone")
   status          String        @default("pending")
