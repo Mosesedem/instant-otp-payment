@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if subdomain already exists
-    const existingPanel = await prisma.panel.findUnique({
+    const existingPanel = await prisma.panel.findFirst({
       where: { subdomain: body.subdomain },
     });
 
@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
         customDomain: body.customDomain || null,
         ownerEmail: body.ownerEmail,
         ownerPhone: body.ownerPhone,
+        ownerName: body.panelName,
         status: "pending",
         userId: user.id,
         paymentStatus: PaymentStatus.PENDING,
