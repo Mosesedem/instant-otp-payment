@@ -52,9 +52,32 @@ export default function Home() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [panelData, setPanelData] = useState<any>(null);
 
+  useEffect(() => {
+    try {
+      const savedStep = localStorage.getItem("flow_step");
+      const savedPanel = localStorage.getItem("panel_data");
+      if (savedStep === "payment" || savedStep === "register" || savedStep === "success") {
+        setStep(savedStep as any);
+      }
+      if (savedPanel) {
+        setPanelData(JSON.parse(savedPanel));
+      }
+    } catch (e) {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("flow_step", step);
+    } catch (e) {}
+  }, [step]);
+
   const handlePanelSubmit = (data: any) => {
     setPanelData(data);
     setStep("payment");
+    try {
+      localStorage.setItem("panel_data", JSON.stringify(data));
+      localStorage.setItem("flow_step", "payment");
+    } catch (e) {}
   };
 
   const handlePaymentSuccess = () => {
@@ -63,6 +86,10 @@ export default function Home() {
       setStep("register");
       setShowSuccess(false);
       setPanelData(null);
+      try {
+        localStorage.removeItem("panel_data");
+        localStorage.setItem("flow_step", "register");
+      } catch (e) {}
     }, 3000);
   };
 
@@ -70,6 +97,10 @@ export default function Home() {
     setPanelData(null);
     setStep("register");
     toast.success("Session reset successfully");
+    try {
+      localStorage.removeItem("panel_data");
+      localStorage.setItem("flow_step", "register");
+    } catch (e) {}
   };
 
   return (

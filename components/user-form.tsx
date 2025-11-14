@@ -32,6 +32,35 @@ export function CreatePanelForm({ onSubmit }: CreatePanelFormProps = {}) {
   const [ownerName, setOwnerName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
+  
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("register_form");
+      if (saved) {
+        const v = JSON.parse(saved);
+        setPanelName(v.panelName || "");
+        setSubdomain(v.subdomain || "");
+        setCustomDomain(v.customDomain || "");
+        setOwnerName(v.ownerName || "");
+        setOwnerEmail(v.ownerEmail || "");
+        setOwnerPhone(v.ownerPhone || "");
+      }
+    } catch (e) {}
+  }, []);
+  
+  useEffect(() => {
+    try {
+      const payload = {
+        panelName,
+        subdomain,
+        customDomain,
+        ownerName,
+        ownerEmail,
+        ownerPhone,
+      };
+      localStorage.setItem("register_form", JSON.stringify(payload));
+    } catch (e) {}
+  }, [panelName, subdomain, customDomain, ownerName, ownerEmail, ownerPhone]);
 
   // Domain validation state
   const [domainStatus, setDomainStatus] = useState<DomainStatus>("idle");
@@ -146,7 +175,7 @@ export function CreatePanelForm({ onSubmit }: CreatePanelFormProps = {}) {
 
       setSuccess(true);
       const panelData = {
-        id: data.id,
+        id: data.panel.id,
         name: panelName,
         subdomain,
         customDomain, // Using panel name as owner name for now

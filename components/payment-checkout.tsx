@@ -106,6 +106,47 @@ export function PaymentCheckout({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Load saved form data from localStorage
+  useEffect(() => {
+    const loadFormData = () => {
+      try {
+        const savedPhone = localStorage.getItem('payment_phone');
+        const savedFirstName = localStorage.getItem('payment_firstName');
+        const savedLastName = localStorage.getItem('payment_lastName');
+        const savedPanel = localStorage.getItem('payment_selectedPanel');
+        const savedPlan = localStorage.getItem('payment_plan');
+        const savedProvider = localStorage.getItem('payment_provider');
+
+        if (savedPhone) setPhone(savedPhone);
+        if (savedFirstName) setFirstName(savedFirstName);
+        if (savedLastName) setLastName(savedLastName);
+        if (savedPanel && panels.some(p => p.id === savedPanel)) setSelectedPanel(savedPanel);
+        if (savedPlan && (savedPlan === 'monthly' || savedPlan === 'annual')) setPlan(savedPlan as PlanId);
+        if (savedProvider && (savedProvider === 'paystack' || savedProvider === 'etegram')) setPaymentProvider(savedProvider as PaymentProvider);
+      } catch (err) {
+        console.error('Failed to load form data from localStorage', err);
+      }
+    };
+    loadFormData();
+  }, [panels]);
+
+  // Save form data to localStorage whenever it changes
+  useEffect(() => {
+    const saveFormData = () => {
+      try {
+        localStorage.setItem('payment_phone', phone);
+        localStorage.setItem('payment_firstName', firstName);
+        localStorage.setItem('payment_lastName', lastName);
+        localStorage.setItem('payment_selectedPanel', selectedPanel);
+        localStorage.setItem('payment_plan', plan);
+        localStorage.setItem('payment_provider', paymentProvider);
+      } catch (err) {
+        console.error('Failed to save form data to localStorage', err);
+      }
+    };
+    saveFormData();
+  }, [phone, firstName, lastName, selectedPanel, plan, paymentProvider]);
+
   useEffect(() => {
     setSelectedPanel(firstSelectablePanelId);
   }, [firstSelectablePanelId]);
@@ -130,6 +171,15 @@ export function PaymentCheckout({
     !selectedPanel ||
     (paymentProvider === "etegram" && (!phone || !firstName || !lastName)) ||
     isProcessing;
+
+  const getButtonText = () => {
+    if (isProcessing) return "Processing...";
+    if (!selectedPanel) return "Select a Panel";
+    if (paymentProvider === "etegram" && !phone) return "Enter Phone Number";
+    if (paymentProvider === "etegram" && !firstName) return "Enter First Name";
+    if (paymentProvider === "etegram" && !lastName) return "Enter Last Name";
+    return isSelectedPanelPaid ? "Payment Completed" : "Proceed to Payment";
+  };
 
   async function handleSubmit() {
     setIsProcessing(true);
@@ -448,16 +498,13 @@ export function PaymentCheckout({
             <span>₦{totals.total.toLocaleString()}</span>
           </div>
           <Button
-            className="w-full mt-4"
+            type="submit"
+            className="w-full mt-6"
             size="lg"
+            disabled={disabled || isSelectedPanelPaid}
             onClick={handleSubmit}
-            disabled={disabled}
           >
-            {isProcessing
-              ? "Processing..."
-              : `Pay with ${
-                  paymentProvider === "paystack" ? "Paystack" : "Etegram"
-                }`}
+            {getButtonText()}
           </Button>
           <p className="text-xs text-muted-foreground text-center">
             Secure payment powered by{" "}
