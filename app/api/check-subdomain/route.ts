@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { PaymentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
 export async function POST(request: Request) {
@@ -36,9 +37,12 @@ export async function POST(request: Request) {
       });
     }
 
-    // Check if subdomain exists in database
-    const existingPanel = await prisma.panel.findUnique({
-      where: { subdomain },
+    // Check if subdomain exists in database (only for completed payments)
+    const existingPanel = await prisma.panel.findFirst({
+      where: {
+        subdomain,
+        paymentStatus: "COMPLETED",
+      },
     });
 
     if (existingPanel) {

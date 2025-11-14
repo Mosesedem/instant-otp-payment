@@ -23,7 +23,7 @@ function getBaseUrl() {
 }
 
 function buildReference(plan: PaymentPlan) {
-  return `ETG-${plan.toUpperCase()}-${Date.now()}-${randomUUID().slice(0, 8)}`;
+  return `PSTK-${plan.toUpperCase()}-${Date.now()}-${randomUUID().slice(0, 8)}`;
 }
 
 export async function POST(request: Request) {
@@ -42,6 +42,9 @@ export async function POST(request: Request) {
     const panel = await prisma.panel.findUnique({
       where: {
         id: panelId,
+      },
+      include: {
+        user: true,
       },
     });
 
@@ -87,7 +90,7 @@ export async function POST(request: Request) {
             status: PaymentStatus.PENDING,
             reference,
             paymentMethod: "online",
-            provider: "etegram",
+            provider: "paystack",
             externalId: reference,
             checkoutUrl: null,
             metadata,
@@ -103,18 +106,64 @@ export async function POST(request: Request) {
             status: PaymentStatus.PENDING,
             reference,
             paymentMethod: "online",
-            provider: "etegram",
+            provider: "paystack",
             externalId: reference,
             metadata,
           },
         });
 
-    const checkoutUrl = `${getBaseUrl()}/payment/etegram/checkout?ref=${reference}`;
+    // Initialize Paystack payment
+    const paystackResponse = await fetch(
+      "https://api.paystack.co/transaction/initialize",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: totalAmount * 100, // Paystack expects amount in kobo
+          email: panel.user.email,
+          reference,
+          callback_url: `${getBaseUrl()}/?payment=success&reference=${reference}`,
+          metadata: {
+            panel_id: panel.id,
+            user_id: userId,
+            plan,
+            custom_fields: [
+              {
+                display_name: "Panel Name",
+                variable_name: "panel_name",
+                value: panel.name || "Untitled Panel",
+              },
+              {
+                display_name: "Subdomain",
+                variable_name: "subdomain",
+                value: panel.subdomain,
+              },
+            ],
+          },
+        }),
+      }
+    );
+
+    const paystackData = await paystackResponse.json();
+
+    if (!paystackResponse.ok) {
+      console.error("Paystack initialization failed:", paystackData);
+      return NextResponse.json(
+        { error: "Failed to initialize Paystack payment" },
+        { status: 500 }
+      );
+    }
+
+    const checkoutUrl = paystackData.data.authorization_url;
 
     payment = await prisma.payment.update({
       where: { id: payment.id },
       data: {
         checkoutUrl,
+        externalId: paystackData.data.reference,
       },
     });
 
@@ -128,10 +177,10 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: true,
-        message: "Etegram payment initiated",
+        message: "Paystack payment initiated",
         reference,
         checkoutUrl,
-        provider: "etegram",
+        provider: "paystack",
         payment,
         pricing: {
           setupFee: SETUP_FEE,
@@ -142,7 +191,10 @@ export async function POST(request: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("[payments:initiate] Failed to initiate payment", error);
+    console.error(
+      "[payments:initiate/paystack] Failed to initiate payment",
+      error
+    );
     return NextResponse.json(
       {
         error: "Failed to initiate payment",

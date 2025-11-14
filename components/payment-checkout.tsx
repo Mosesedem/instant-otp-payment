@@ -40,6 +40,7 @@ const plans = [
 ];
 
 type PlanId = (typeof plans)[number]["id"];
+type PaymentProvider = "paystack" | "etegram";
 
 type PanelSummary = {
   id: string;
@@ -94,6 +95,8 @@ export function PaymentCheckout({
   }, [initialPanelId, panels]);
   const [selectedPanel, setSelectedPanel] = useState(firstSelectablePanelId);
   const [plan, setPlan] = useState<PlanId>("monthly");
+  const [paymentProvider, setPaymentProvider] =
+    useState<PaymentProvider>("paystack");
   const [phone, setPhone] = useState(defaultPhone ?? "");
   const [firstName, setFirstName] = useState(userName?.split(" ")?.[0] ?? "");
   const [lastName, setLastName] = useState(
@@ -124,12 +127,8 @@ export function PaymentCheckout({
   const isSelectedPanelPaid = selectedPanelInfo?.paymentStatus === "COMPLETED";
 
   const disabled =
-    !selectedPanel ||
-    !phone ||
-    !firstName ||
-    !lastName ||
-    isProcessing ||
-    Boolean(isSelectedPanelPaid);
+    !selectedPanel || !phone || !firstName || !lastName || isProcessing;
+  Boolean(isSelectedPanelPaid);
 
   async function handleSubmit() {
     setIsProcessing(true);
@@ -137,7 +136,12 @@ export function PaymentCheckout({
     setSuccessMessage(null);
 
     try {
-      const response = await fetch("/api/payments/initiate", {
+      const endpoint =
+        paymentProvider === "paystack"
+          ? "/api/payments/initiate/paystack"
+          : "/api/payments/initiate";
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ panelId: selectedPanel, plan }),
@@ -149,6 +153,13 @@ export function PaymentCheckout({
         throw new Error(data?.error || "Failed to start payment");
       }
 
+      if (paymentProvider === "paystack") {
+        // Redirect to Paystack checkout
+        window.location.href = data.checkoutUrl;
+        return;
+      }
+
+      // Handle Etegram payment
       await payWithEtegram({
         projectID: etegramProjectId,
         publicKey: etegramPublicKey,
@@ -168,7 +179,7 @@ export function PaymentCheckout({
       const message =
         err instanceof Error ? err.message : "Unable to start payment";
       setError(message);
-      console.error("Etegram payment error", err);
+      console.error(`${paymentProvider} payment error`, err);
     } finally {
       setIsProcessing(false);
     }
@@ -329,6 +340,58 @@ export function PaymentCheckout({
           <Separator />
 
           <div className="space-y-3">
+            <h3 className="font-semibold">Payment Method</h3>
+            <div className="grid gap-3 md:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setPaymentProvider("paystack")}
+                className={cn(
+                  "rounded-lg border p-4 text-left transition",
+                  paymentProvider === "paystack"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/30"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">
+                    P
+                  </div>
+                  <div>
+                    <p className="font-semibold">Paystack</p>
+                    <p className="text-sm text-muted-foreground">
+                      Pay with card, bank transfer, or USSD
+                    </p>
+                  </div>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentProvider("etegram")}
+                className={cn(
+                  "rounded-lg border p-4 text-left transition",
+                  paymentProvider === "etegram"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/30"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-green-600 rounded flex items-center justify-center text-white font-bold text-sm">
+                    E
+                  </div>
+                  <div>
+                    <p className="font-semibold">Etegram</p>
+                    <p className="text-sm text-muted-foreground">
+                      Pay with mobile money or card
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-3">
             <h3 className="font-semibold">Billing Contact</h3>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
@@ -389,10 +452,15 @@ export function PaymentCheckout({
             onClick={handleSubmit}
             disabled={disabled}
           >
-            {isProcessing ? "Processing..." : "Pay with Etegram"}
+            {isProcessing
+              ? "Processing..."
+              : `Pay with ${
+                  paymentProvider === "paystack" ? "Paystack" : "Etegram"
+                }`}
           </Button>
           <p className="text-xs text-muted-foreground text-center">
-            Secure payment powered by Etegram.
+            Secure payment powered by{" "}
+            {paymentProvider === "paystack" ? "Paystack" : "Etegram"}.
           </p>
         </CardContent>
       </Card>

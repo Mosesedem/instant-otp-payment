@@ -75,8 +75,8 @@ model Contact {
 model Panel {
   id              String        @id @default(cuid())
   name            String?
-  subdomain       String        @unique
-  customDomain    String?       @unique @map("custom_domain")
+  subdomain       String
+  customDomain    String?       @map("custom_domain")
   domain          String?
   ownerName       String        @map("owner_name")
   ownerEmail      String        @map("owner_email")

@@ -82,17 +82,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if subdomain already exists
-    const existingPanel = await prisma.panel.findUnique({
-      where: { subdomain },
-    });
-
-    if (existingPanel) {
-      return NextResponse.json(
-        { error: "Subdomain already exists" },
-        { status: 409 }
-      );
-    }
+    // Note: We allow duplicate subdomains for unpaid panels
+    // Uniqueness is enforced only for completed payments
 
     // Find or create user
     let user = await prisma.user.findUnique({

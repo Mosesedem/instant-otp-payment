@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import dns from "dns";
 import { promisify } from "util";
+import { PaymentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
 const resolveTxt = promisify(dns.resolveTxt);
@@ -28,10 +29,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if domain already exists in database
+    // Check if domain already exists in database (only for completed payments)
     const existingPanelWithDomain = await prisma.panel.findFirst({
       where: {
         OR: [{ customDomain: domain }, { domain: domain }],
+        paymentStatus: PaymentStatus.COMPLETED,
       },
     });
 
