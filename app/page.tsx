@@ -56,7 +56,11 @@ export default function Home() {
     try {
       const savedStep = localStorage.getItem("flow_step");
       const savedPanel = localStorage.getItem("panel_data");
-      if (savedStep === "payment" || savedStep === "register" || savedStep === "success") {
+      if (
+        savedStep === "payment" ||
+        savedStep === "register" ||
+        savedStep === "success"
+      ) {
         setStep(savedStep as any);
       }
       if (savedPanel) {
@@ -117,25 +121,25 @@ export default function Home() {
 
       <div className="container mx-auto px-4 py-4 md:py-8 max-w-7xl">
         {/* Hero Section */}
-        <div className="hidden lg:block mb-8">
-          <div className="relative overflow-hidden rounded-2xl bg-background p-8 md:p-12 shadow-xl">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-              <div className="space-y-4 z-10 relative">
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold bg-primary bg-clip-text text-transparent leading-tight">
+        <div className="mb-8">
+          <div className="relative overflow-hidden rounded-2xl bg-background p-4 md:p-8 lg:p-12 shadow-xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 items-center">
+              <div className="space-y-4 z-10 relative text-center md:text-left">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold bg-primary bg-clip-text text-transparent leading-tight">
                   INSTANT OTP CHILD PANEL REGISTRATION
                 </h1>
-                <p className="text-lg md:text-xl text-foreground leading-relaxed">
+                <p className="text-base md:text-lg lg:text-xl text-foreground leading-relaxed">
                   Register for the InstantOTP child panel and start making money
                   from your own platform.
                 </p>
-                <p className="text-base text-foreground/80">
+                <p className="text-sm md:text-base text-foreground/80">
                   Join us today and be part of the future of instant SMS
                   verifications.
                 </p>
-                <div className="flex gap-4 pt-4">
+                <div className="flex justify-center md:justify-start gap-4 pt-4">
                   <Button
                     size="lg"
-                    className="font-semibold text-xl"
+                    className="font-semibold text-lg md:text-xl"
                     onClick={() => {
                       setStep("register");
                       // Scroll to registration section
@@ -150,19 +154,19 @@ export default function Home() {
                   </Button>
                 </div>
               </div>
-              <div className="relative h-64 md:h-96">
+              <div className="relative h-64 pt-0 md:h-64 lg:h-96 flex justify-center md:justify-end">
                 <Image
                   src="/images/hero.svg"
                   alt="Hero Image"
                   fill
                   // style={{ objectFit: "cover" }}
-                  className=" animate-spin spin-outslow"
+                  className=" animate-spin spin-outslow pt-2"
                 />
               </div>
             </div>
             {/* Decorative elements */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/20 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary-foreground/10 rounded-full blur-3xl"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 md:w-64 md:h-64 bg-secondary/20 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 md:w-96 md:h-96 bg-primary-foreground/10 rounded-full blur-3xl"></div>
           </div>
         </div>
 
@@ -170,7 +174,10 @@ export default function Home() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 order-1" id="panel-registration">
+          <div
+            className="lg:col-span-2 order-1 text-center md:text-left"
+            id="panel-registration"
+          >
             {step === "register" && (
               <CreatePanelForm onSubmit={handlePanelSubmit} />
             )}
