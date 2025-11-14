@@ -262,37 +262,26 @@ export function TicketSelection({
   return (
     <div className="space-y-4">
       {/* Event Info Card */}
-      <Card className="border-orange-200 bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/20 dark:to-background">
+      <Card className="border-orange-200 bg-linear-0-to-br from-orange-50 to-white dark:from-orange-950/20 dark:to-background">
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between">
             <div className="space-y-2">
-              <CardTitle className="text-xl md:text-2xl lg:text-3xl font-bold text-orange-600 dark:text-orange-400">
-                Akwa Ibom Tech Week 2025
+              <CardTitle className="text-xl md:text-2xl lg:text-3xl font-bold text-primary dark:text-primary">
+                InstantOTP Child Panel ownership registration
               </CardTitle>
               <p className="text-sm md:text-base text-muted-foreground">
-                Catalyzing Digital Transformation for Innovation, Investment and
-                Impact
+                Regsiter for the InstantOTP child panel and start making money
+                from your own platform.
               </p>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-orange-600" />
-              <span className="font-medium">03 - 08 November 2025</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-orange-600" />
-              <span className="font-medium">CEEDAPEG Hotels, Uyo</span>
-            </div>
-          </div>
-
           <div className="pt-3 border-t">
             {hasCartItems ? (
               <Button
                 onClick={onProceedToCheckout}
-                className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold text-base md:text-lg h-12 md:h-14"
+                className="w-full bg-primary/90 hover:bg-primary text-white font-semibold text-base md:text-lg h-12 md:h-14"
               >
                 <ShoppingCart className="h-4 w-4 mr-2" />
                 Complete Payment
@@ -300,8 +289,8 @@ export function TicketSelection({
             ) : (
               <Sheet open={isSheetOpen} onOpenChange={handleSheetChange}>
                 <SheetTrigger asChild>
-                  <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold text-base md:text-lg h-12 md:h-14">
-                    Buy Ticket - Get Upto 80% Off
+                  <Button className="w-full bg-primary hover:bg-primary/90 text-white font-semibold text-base md:text-lg h-12 md:h-14">
+                    Get Started Now
                   </Button>
                 </SheetTrigger>
                 <SheetContent
@@ -309,7 +298,7 @@ export function TicketSelection({
                   className="h-[90vh] sm:h-[85vh] sm:max-w-2xl sm:mx-auto overflow-y-auto p-6"
                 >
                   <SheetHeader className="pb-4 border-b sticky top-0 bg-background z-10">
-                    <SheetTitle className="text-lg md:text-xl font-bold text-orange-600">
+                    <SheetTitle className="text-lg md:text-xl font-bold text-primary">
                       Select Your Ticket Package
                     </SheetTitle>
                     <p className="text-xs md:text-sm text-muted-foreground">
@@ -324,7 +313,7 @@ export function TicketSelection({
                         key={ticket.id}
                         className={`relative cursor-pointer transition-all hover:shadow-md ${
                           selectedTicket === ticket.id
-                            ? "ring-2 ring-orange-600 border-orange-600"
+                            ? "ring-2 ring-primary border-primary"
                             : "hover:border-orange-300"
                         }`}
                         onClick={() => handleSelectTicket(ticket.id)}
@@ -337,7 +326,7 @@ export function TicketSelection({
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <CardTitle className="text-base md:text-lg font-bold text-orange-600">
+                              <CardTitle className="text-base md:text-lg font-bold text-primary">
                                 {ticket.name}
                               </CardTitle>
                               <p className="text-xs md:text-sm text-muted-foreground mt-1">
@@ -348,7 +337,7 @@ export function TicketSelection({
                         </CardHeader>
                         <CardContent className="space-y-3">
                           <div className="flex items-baseline gap-2">
-                            <span className="text-2xl md:text-3xl font-bold text-orange-600">
+                            <span className="text-2xl md:text-3xl font-bold text-primary">
                               ₦{ticket.price.toLocaleString()}
                             </span>
                             <span className="text-sm text-muted-foreground line-through">
@@ -369,7 +358,7 @@ export function TicketSelection({
                                 key={idx}
                                 className="flex items-start gap-2 text-xs md:text-sm"
                               >
-                                <Check className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                                <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                                 <span className="text-muted-foreground">
                                   {feature}
                                 </span>
@@ -388,7 +377,7 @@ export function TicketSelection({
                               className="border-0"
                             >
                               <AccordionTrigger
-                                className="text-xs md:text-sm font-semibold text-orange-600 hover:no-underline py-2"
+                                className="text-xs md:text-sm font-semibold text-primary hover:no-underline py-2"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 View All Features ({ticket.features.length})
@@ -400,7 +389,7 @@ export function TicketSelection({
                                     key={idx}
                                     className="flex items-start gap-2 text-xs md:text-sm"
                                   >
-                                    <Check className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                                    <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                                     <span className="text-muted-foreground">
                                       {feature}
                                     </span>
@@ -410,7 +399,7 @@ export function TicketSelection({
                             </AccordionItem>
 
                             {/* <AccordionItem value="coverage" className="border-0">
-                            <AccordionTrigger className="text-xs md:text-sm font-semibold text-orange-600 hover:no-underline py-2">
+                            <AccordionTrigger className="text-xs md:text-sm font-semibold text-primary hover:no-underline py-2">
                               Coverage Details
                             </AccordionTrigger>
                             <AccordionContent>
@@ -439,7 +428,7 @@ export function TicketSelection({
                           </Accordion>
 
                           <Button
-                            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold mt-3"
+                            className="w-full bg-primary hover:bg-primary/90 text-white font-semibold mt-3"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSelectTicket(ticket.id);
@@ -457,39 +446,6 @@ export function TicketSelection({
           </div>
         </CardContent>
       </Card>
-
-      {/* Selected Ticket Summary */}
-      {/* {selectedTicket && !isSheetOpen && (
-        <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-950/20">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Check className="h-5 w-5 text-orange-600" />
-                <div>
-                  <p className="text-sm font-semibold">
-                    {TICKET_TYPES.find((t) => t.id === selectedTicket)?.name}{" "}
-                    Selected
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    ₦
-                    {TICKET_TYPES.find(
-                      (t) => t.id === selectedTicket
-                    )?.price.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsSheetOpen(true)}
-                className="text-xs"
-              >
-                Change
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )} */}
     </div>
   );
 }

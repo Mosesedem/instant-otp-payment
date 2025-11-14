@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { EventMap } from "@/components/event-map";
+
 import {
   MapPin,
   Calendar,
@@ -320,14 +320,6 @@ export function OrderSummary({
           </Button>
         </CardContent>
       </Card>
-
-      {/* Map */}
-      <div className="hidden lg:block">
-        <EventMap
-          eventName="Akwa Ibom Tech Week 2025"
-          eventAddress="CEEDAPEG Hotels, Chief Odiong Street, Uyo, Nigeria"
-        />
-      </div>
     </div>
   );
 }

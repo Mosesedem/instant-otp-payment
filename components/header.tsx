@@ -1,30 +1,27 @@
-import { Calendar, MapPin } from "lucide-react";
+import Image from "next/image";
 
 export function Header() {
   return (
-    <header className="bg-primary text-primary-foreground py-4 md:py-6 shadow-lg sticky top-0 z-50">
-      <div className="container mx-auto px-4 max-w-7xl">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">
-              Akwa Ibom Tech Week 2025
-            </h1>
-            <p className="text-primary-foreground/90 text-xs md:text-sm mt-1">
-              Register for Africa's Premier Tech Event
-            </p>
+    <header className="sticky top-0 z-50 border-b border-border bg-background ">
+      <div className="container mx-auto px-4 py-3 md:py-4">
+        <div className="flex items-center justify-between gap-4">
+          {/* Logo and Brand */}
+          <div className="flex items-center gap-2 md:gap-3">
+            <Image
+              alt="InstantOTP Logo"
+              src="/images/logo.svg"
+              width={32}
+              height={32}
+              priority={true}
+              quality={100}
+              className="h-8 w-8 rounded-sm md:h-10 md:w-10"
+            />
+            <h2 className="text-lg font-semibold bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent md:text-xl">
+              InstantOTP
+            </h2>
           </div>
-          <div className="flex flex-col sm:text-right text-xs md:text-sm space-y-1">
-            <div className="flex items-center gap-1 sm:justify-end">
-              <Calendar className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="text-primary-foreground/90">Nov 3-8, 2025</span>
-            </div>
-            <div className="flex items-center gap-1 sm:justify-end">
-              <MapPin className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="text-primary-foreground/90">
-                CEEDAPEG Hotels, Uyo
-              </span>
-            </div>
-          </div>
+
+          {/* Auth/User Section */}
         </div>
       </div>
     </header>

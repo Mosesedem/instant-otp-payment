@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
 import { TicketSelection } from "@/components/ticket-selection";
-import { AttendeeForm } from "@/components/attendee-form";
+import { CreatePanelForm } from "@/components/user-form";
 import { PaymentOptions } from "@/components/payment-options";
 import { OrderSummary } from "@/components/order-summary";
 import { SuccessModal } from "@/components/success-modal";
@@ -122,7 +122,7 @@ export default function Home() {
   }, [step, cart, getSession]);
 
   return (
-    <main className="min-h-screen bg-linear-to-br from-accent via-background to-accent">
+    <main className="min-h-screen bg-background text-foreground">
       {/* Wrap PaymentCallbackHandler in Suspense */}
       <Suspense fallback={null}>
         <PaymentCallbackHandler
@@ -136,30 +136,24 @@ export default function Home() {
       <div className="container mx-auto px-4 py-4 md:py-8 max-w-7xl">
         {/* Hero Section */}
         <div className="hidden lg:block mb-8">
-          <div className="relative overflow-hidden rounded-2xl bg-linear-to-r from-primary via-primary/90 to-secondary p-8 md:p-12 shadow-xl">
+          <div className="relative overflow-hidden rounded-2xl bg-background p-8 md:p-12 shadow-xl">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
               <div className="space-y-4 z-10 relative">
-                <div className="inline-flex items-center gap-2 bg-primary-foreground/10 backdrop-blur-sm px-4 py-2 rounded-full text-sm text-primary-foreground">
-                  <Sparkles className="h-4 w-4" />
-                  <span>November 3-8, 2025</span>
-                </div>
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground leading-tight">
-                  Akwa Ibom Tech Week 2025
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold bg-primary bg-clip-text text-transparent leading-tight">
+                  INSTANT OTP CHILD PANEL REGISTRATION
                 </h1>
-                <p className="text-lg md:text-xl text-primary-foreground/90 leading-relaxed">
-                  Catalyzing Digital Transformation for Innovation, Investment
-                  and Impact
+                <p className="text-lg md:text-xl text-foreground leading-relaxed">
+                  Register for the InstantOTP child panel and start making money
+                  from your own platform.
                 </p>
-                <p className="text-base text-primary-foreground/80">
-                  Join tech leaders, innovators, and entrepreneurs for Africa's
-                  premier technology conference. Network with industry experts,
-                  attend workshops, and be part of the digital revolution
-                  shaping Akwa Ibom's future.
+                <p className="text-base text-foreground/80">
+                  Join us today and be part of the future of instant SMS
+                  verifications.
                 </p>
                 <div className="flex gap-4 pt-4">
                   <Button
                     size="lg"
-                    className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-semibold"
+                    className="font-semibold text-xl"
                     onClick={() => {
                       setTicketSheetOpen(true);
                       // Also scroll to ticket section
@@ -170,31 +164,18 @@ export default function Home() {
                       }, 100);
                     }}
                   >
-                    Get Your Tickets Now
+                    Get Started
                   </Button>
                 </div>
               </div>
               <div className="relative h-64 md:h-96">
-                <div className="absolute inset-0 bg-linear-to-br from-secondary/20 to-transparent rounded-xl"></div>
                 <Image
-                  src="/images/image.webp"
-                  alt="Akwa Ibom Tech Week 2025"
+                  src="/images/hero.svg"
+                  alt="Hero Image"
                   layout="fill"
                   // objectFit="cover"
-                  className="rounded-xl"
+                  className="rounded-xl animate-spin spin-outslow"
                 />
-
-                {/* <div className="relative h-full flex items-center justify-center">
-                  <div className="text-center text-primary-foreground/80 space-y-4">
-                    <div className="text-6xl md:text-8xl font-bold opacity-20">
-                      2025
-                    </div>
-                    <div className="text-2xl md:text-3xl font-semibold">
-                      Tech Week
-                    </div>
-                    <div className="text-lg">Uyo, Akwa Ibom</div>
-                  </div>
-                </div> */}
               </div>
             </div>
             {/* Decorative elements */}
@@ -222,13 +203,7 @@ export default function Home() {
                 onProceedToCheckout={handleProceedToCheckout}
               />
             )}
-            {step === "attendee" && (
-              <AttendeeForm
-                onSubmit={handleAttendeeSubmit}
-                onBack={() => setStep("tickets")}
-                cart={cart}
-              />
-            )}
+            {step === "attendee" && <CreatePanelForm />}
             {step === "payment" && (
               <PaymentOptions
                 onSuccess={handlePaymentSuccess}
