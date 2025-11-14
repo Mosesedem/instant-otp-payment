@@ -1,0 +1,109 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model Purchase {
+  id              String   @id @default(cuid())
+  sessionId       String
+  reference       String   @unique
+  status          String   // 'attempted', 'successful', 'failed'
+  paymentMethod   String   // 'etegram', 'paystack'
+  amount          Float
+  
+  // Attendee Information
+  attendeeEmail   String
+  attendeeName    String
+  attendeePhone   String?
+  attendeeCompany String?
+  attendeeJobTitle String?
+  
+  // Tickets purchased
+  tickets         Json     // Array of {ticketType, quantity, price}
+  
+  // Payment metadata
+  metadata        Json?    // Additional payment data
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  completedAt     DateTime?
+  
+  // Relations
+  ticketRecords   Ticket[]
+  
+  @@index([sessionId])
+  @@index([attendeeEmail])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Ticket {
+  id              String   @id @default(cuid())
+  ticketId        String   @unique  // e.g., AITW-LKJH123-ABC456
+  purchaseId      String
+  reference       String   // Payment reference
+  
+  // Ticket details
+  ticketType      String   // 'Regular', 'VIP', 'Student', etc.
+  status          String   @default("active") // 'active', 'used', 'cancelled'
+  
+  // Attendee information
+  attendeeName    String
+  attendeeEmail   String
+  attendeePhone   String?
+  attendeeCompany String?
+  attendeeJobTitle String?
+  
+  // Pricing
+  price           Float
+  
+  // Check-in tracking
+  checkedInAt     DateTime?
+  checkedInBy     String?  // Staff member who checked in
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  purchase        Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  
+  @@index([ticketId])
+  @@index([purchaseId])
+  @@index([reference])
+  @@index([attendeeEmail])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Stores anonymous session-based draft/progress of the checkout form
+model SessionDraft {
+  id        String   @id @default(cuid())
+  sessionId String   @unique
+
+  // Snapshot of cart and attendee info tracked client-side
+  cart      Json
+  attendee  Json?
+  payment   Json?
+
+  // Optional high-level status and last step identifier
+  status    String?   // e.g., 'in_progress', 'completed'
+  lastStep  String?   // e.g., 'tickets' | 'attendee' | 'payment' | 'success'
+
+  // Arbitrary draft payload (e.g., attendee form progress)
+  draft     Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([updatedAt])
+}
