@@ -127,8 +127,9 @@ export function PaymentCheckout({
   const isSelectedPanelPaid = selectedPanelInfo?.paymentStatus === "COMPLETED";
 
   const disabled =
-    !selectedPanel || !phone || !firstName || !lastName || isProcessing;
-  Boolean(isSelectedPanelPaid);
+    !selectedPanel ||
+    (paymentProvider === "etegram" && (!phone || !firstName || !lastName)) ||
+    isProcessing;
 
   async function handleSubmit() {
     setIsProcessing(true);
