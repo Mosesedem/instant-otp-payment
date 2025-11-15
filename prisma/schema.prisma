@@ -75,18 +75,18 @@ model Contact {
 model Panel {
   id              String        @id @default(cuid())
   name            String?
-  subdomain       String
-  customDomain    String?       @map("custom_domain")
+  subdomain       String?
+  customDomain    String?
   domain          String?
-  ownerName       String        @map("owner_name")
-  ownerEmail      String        @map("owner_email")
-  ownerPhone      String        @map("owner_phone")
-  status          String        @default("pending")
-  vercelProjectId String?       @map("vercel_project_id")
-  userId          String        @map("user_id")
+  ownerName       String?
+  ownerEmail      String?
+  ownerPhone      String?
+  status          String?
+  vercelProjectId String?
+  userId          String
   user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   isActive        Boolean       @default(true)
   description     String?
   paymentStatus   PaymentStatus @default(PENDING)
