@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { payWithEtegram } from "etegram-pay";
-
+import Image from "next/image";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -410,9 +410,15 @@ export function PaymentCheckout({
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">
+                  {/* <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm">
                     P
-                  </div>
+                  </div> */}
+                  <Image
+                    src="/images/paystack.png"
+                    alt="Paystack logo"
+                    height={24}
+                    width={24}
+                  />
                   <div>
                     <p className="font-semibold">Paystack</p>
                     <p className="text-sm text-muted-foreground">
@@ -432,13 +438,19 @@ export function PaymentCheckout({
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-green-600 rounded flex items-center justify-center text-white font-bold text-sm">
+                  {/* <div className="w-8 h-8 bg-green-600 rounded flex items-center justify-center text-white font-bold text-sm">
                     E
-                  </div>
+                  </div> */}
+                  <Image
+                    src="/images/etegram.png"
+                    alt="etegram logo"
+                    height={24}
+                    width={24}
+                  />
                   <div>
                     <p className="font-semibold">Etegram</p>
                     <p className="text-sm text-muted-foreground">
-                      Pay with mobile money or card
+                      Pay with bank transfer
                     </p>
                   </div>
                 </div>

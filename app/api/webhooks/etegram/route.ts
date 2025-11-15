@@ -144,7 +144,8 @@ export async function POST(req: NextRequest) {
       const panelData = {
         panelId: payment.panel!.id,
         panelName: payment.panel!.name || "Untitled Panel",
-        subdomain: payment.panel!.subdomain,
+        // Ensure subdomain is always a string to satisfy the Email `Panel` type
+        subdomain: payment.panel!.subdomain ?? payment.panel!.id,
         customDomain: payment.panel!.customDomain || undefined,
         ownerName: payment.user.name || payment.panel!.name || "Panel Owner",
         ownerEmail: payment.user.email!,

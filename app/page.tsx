@@ -11,46 +11,60 @@ import { Button } from "@/components/ui/button";
 import { RotateCcw, Sparkles } from "lucide-react";
 import Image from "next/image";
 
-// Separate component that uses useSearchParams
-function PaymentCallbackHandler({
-  setShowSuccess,
-  setStep,
-}: {
-  setShowSuccess: (show: boolean) => void;
-  setStep: (step: "register" | "payment" | "success") => void;
-}) {
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    const paymentStatus = searchParams.get("payment");
-    const reference = searchParams.get("reference");
-
-    if (paymentStatus === "success" && reference) {
-      toast.success("Payment successful!");
-      setShowSuccess(true);
-      setTimeout(() => {
-        setStep("register");
-        setShowSuccess(false);
-        // Clear URL parameters
-        window.history.replaceState({}, "", "/");
-      }, 3000);
-    } else if (paymentStatus === "failed") {
-      toast.error("Payment failed. Please try again.");
-      setStep("payment");
-      // Clear URL parameters
-      window.history.replaceState({}, "", "/");
-    }
-  }, [searchParams, setShowSuccess, setStep]);
-
-  return null;
-}
-
 export default function Home() {
   const [step, setStep] = useState<"register" | "payment" | "success">(
     "register"
   );
   const [showSuccess, setShowSuccess] = useState(false);
   const [panelData, setPanelData] = useState<any>(null);
+
+  // Separate component that uses useSearchParams
+  function PaymentCallbackHandler({
+    setShowSuccess,
+    setStep,
+  }: {
+    setShowSuccess: (show: boolean) => void;
+    setStep: (step: "register" | "payment" | "success") => void;
+  }) {
+    const searchParams = useSearchParams();
+
+    const handlePaymentSuccess = () => {
+      setShowSuccess(true);
+      setTimeout(() => {
+        setStep("register");
+        setShowSuccess(false);
+        setPanelData(null);
+        try {
+          localStorage.removeItem("panel_data");
+          localStorage.setItem("flow_step", "register");
+        } catch (e) {}
+      }, 3000);
+    };
+
+    useEffect(() => {
+      const paymentStatus = searchParams.get("payment");
+      const reference = searchParams.get("reference");
+
+      if (paymentStatus === "success" && reference) {
+        toast.success("Payment successful!");
+        setShowSuccess(true);
+        handlePaymentSuccess;
+        setTimeout(() => {
+          setStep("register");
+          setShowSuccess(false);
+          // Clear URL parameters
+          window.history.replaceState({}, "", "/");
+        }, 3000);
+      } else if (paymentStatus === "failed") {
+        toast.error("Payment failed. Please try again.");
+        setStep("payment");
+        // Clear URL parameters
+        window.history.replaceState({}, "", "/");
+      }
+    }, [searchParams, setShowSuccess, setStep]);
+
+    return null;
+  }
 
   useEffect(() => {
     try {
@@ -82,19 +96,6 @@ export default function Home() {
       localStorage.setItem("panel_data", JSON.stringify(data));
       localStorage.setItem("flow_step", "payment");
     } catch (e) {}
-  };
-
-  const handlePaymentSuccess = () => {
-    setShowSuccess(true);
-    setTimeout(() => {
-      setStep("register");
-      setShowSuccess(false);
-      setPanelData(null);
-      try {
-        localStorage.removeItem("panel_data");
-        localStorage.setItem("flow_step", "register");
-      } catch (e) {}
-    }, 3000);
   };
 
   const handleReset = () => {

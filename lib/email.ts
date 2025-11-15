@@ -262,6 +262,15 @@ export async function sendPanelEmail(params: EmailParams): Promise<void> {
     console.log(`Email sent successfully to ${to}`);
   } catch (error) {
     console.error(`Failed to send email to ${to}:`, error);
+    // Log additional details if available
+    if (error instanceof Error && "response" in error) {
+      const axiosError = error as any;
+      console.error(`Email API Error Details:`, {
+        status: axiosError.response?.status,
+        statusText: axiosError.response?.statusText,
+        data: axiosError.response?.data,
+      });
+    }
     throw error;
   }
 }

@@ -125,7 +125,7 @@ export async function POST(request: Request) {
           amount: totalAmount * 100, // Paystack expects amount in kobo
           email: panel.user.email,
           reference,
-          callback_url: `${getBaseUrl()}/?payment=success&reference=${reference}`,
+          callback_url: `${getBaseUrl()}/verify&reference=${reference}`,
           metadata: {
             panel_id: panel.id,
             user_id: userId,
